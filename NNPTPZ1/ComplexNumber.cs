@@ -10,7 +10,7 @@ namespace NNPTPZ1
     {
 
         public double RealNumber { get; set; }
-        public float ImaginaryNumber { get; set; } //is float correct?
+        public float ImaginaryNumber { get; set; } 
 
         public override bool Equals(object obj)
         {

@@ -88,32 +88,22 @@ namespace NNPTPZ1
 
         private static Color ComputePixelColor(double x, double y, Polynome polynomial, Polynome derivative, List<ComplexNumber> roots, Color[] colors)
         {
-            ComplexNumber complexNumber = new ComplexNumber()
-            {
-                RealNumber = x,
-                ImaginaryNumber = (float)(y)
-            };
+            ComplexNumber complexNumber = CreateComplexNumber(x, y);
 
-            if (complexNumber.RealNumber == 0)
-                complexNumber.RealNumber = 0.0001;
-            if (complexNumber.ImaginaryNumber == 0)
-                complexNumber.ImaginaryNumber = 0.0001f;
+            var (result, iterations) = FindSolutionOfEquation(complexNumber, polynomial, derivative, roots);
+            int id = FindRootId(result, roots);
 
-            // find solution of equation using newton's iteration
-            float it = 0;
-            for (int i = 0; i < 30; i++)
-            {
-                var diff = polynomial.Eval(complexNumber).Divide(derivative.Eval(complexNumber));
-                complexNumber = complexNumber.Subtract(diff);
 
-                if (Math.Pow(diff.RealNumber, 2) +
-                    Math.Pow(diff.ImaginaryNumber, 2) >= 0.5)
-                {
-                    i--;
-                }
-                it++;
-            }
 
+
+
+
+            return CalculatePixelColor(id, iterations, colors);
+
+        }
+
+        private static int FindRootId(ComplexNumber complexNumber, List<ComplexNumber> roots)
+        {
             var known = false;
             var id = 0;
 
@@ -131,16 +121,48 @@ namespace NNPTPZ1
                 roots.Add(complexNumber);
                 id = roots.Count;
             }
+            return id;
 
-            var vv = colors[id % colors.Length];
-            vv = Color.FromArgb(vv.R, vv.G, vv.B);
-            vv = Color.FromArgb(
-                Math.Min(Math.Max(0, vv.R - (int)it * 2), 255),
-                Math.Min(Math.Max(0, vv.G - (int)it * 2), 255),
-                Math.Min(Math.Max(0, vv.B - (int)it * 2), 255));
+        }
 
-            return vv;
+        private static (ComplexNumber result, float iteration) FindSolutionOfEquation(ComplexNumber complexNumber, Polynome polynomial, Polynome derivative, List<ComplexNumber> roots)
+        {
+            // find solution of equation using newton's iteration
+            const int requiredIterations = 30;
+            float iteration = 0;
+            for (int i = 0; i < requiredIterations; i++)
+            {
+                var diff = polynomial.Eval(complexNumber).Divide(derivative.Eval(complexNumber));
+                complexNumber = complexNumber.Subtract(diff);
 
+                if (Math.Pow(diff.RealNumber, 2) +
+                    Math.Pow(diff.ImaginaryNumber, 2) >= 0.5)
+                {
+                    i--;
+                }
+                iteration++;
+            }
+            return (complexNumber, iteration);
+
+
+        }
+
+
+
+        private static ComplexNumber CreateComplexNumber(double x, double y)
+        {
+            ComplexNumber complexNumber = new ComplexNumber()
+            {
+                RealNumber = x,
+                ImaginaryNumber = (float)y
+            };
+
+            if (complexNumber.RealNumber == 0)
+                complexNumber.RealNumber = 0.0001;
+            if (complexNumber.ImaginaryNumber == 0)
+                complexNumber.ImaginaryNumber = 0.0001f;
+
+            return complexNumber;
         }
 
         private static void ComputeNewtonFractal(
@@ -151,46 +173,38 @@ namespace NNPTPZ1
             Color[] colors)
         {
 
-
-
-            double xmin = xMin;
-            double xmax = xMax;
-            double ymin = yMin;
-            double ymax = yMax;
-
-            double xstep = (xmax - xmin) / width;
-            double ystep = (ymax - ymin) / height;
-
             List<ComplexNumber> roots = new List<ComplexNumber>();
 
-            Polynome polynome = new Polynome();
-            polynome.Coefficient.Add(new ComplexNumber() { RealNumber = 1 });
-            polynome.Coefficient.Add(ComplexNumber.Zero);
-            polynome.Coefficient.Add(ComplexNumber.Zero);
-            polynome.Coefficient.Add(new ComplexNumber() { RealNumber = 1 });
-            Polynome ptmp = polynome;
-            Polynome derivative = polynome.Derive();
-
-            Console.WriteLine(polynome);
-            Console.WriteLine(derivative);
-
-
+            Console.WriteLine(polynomeP);
+            Console.WriteLine(polynomePD);
 
             for (int i = 0; i < width; i++)
             {
                 for (int j = 0; j < height; j++)
                 {
                     // find "world" coordinates of pixel
-                    double y = ymin + i * ystep;
-                    double x = xmin + j * xstep;
+                    double y = yMin + i * yStep;
+                    double x = xMin + j * xStep;
 
                     var color = ComputePixelColor(
-                        x, y, polynome, derivative, roots, colors);
+                        x, y, polynomeP, polynomePD, roots, colors);
                     bitmap.SetPixel(j, i, color);
 
                 }
             }
 
+        }
+
+        private static Color CalculatePixelColor(int rootId, float iterations, Color[] colors)
+        {
+            var pixelColor = colors[rootId % colors.Length];
+            pixelColor = Color.FromArgb(pixelColor.R, pixelColor.G, pixelColor.B);
+            pixelColor = Color.FromArgb(
+                Math.Min(Math.Max(0, pixelColor.R - (int)iterations * 2), 255),
+                Math.Min(Math.Max(0, pixelColor.G - (int)iterations * 2), 255),
+                Math.Min(Math.Max(0, pixelColor.B - (int)iterations * 2), 255));
+
+            return pixelColor;
         }
 
         private static void SaveImageResult(string output, Bitmap bitmap)
